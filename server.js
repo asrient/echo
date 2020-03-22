@@ -1,32 +1,56 @@
-const dgram = require('dgram');
 var http = require('http');
 
-const socket = dgram.createSocket('udp4');
+var udp = require('dgram');
 
 var log=[];
 
-socket.on('error', (err) => {
-    console.log(`server error:\n${err.stack}`);
-    server.close();
-  });
-  
-  socket.on('message', (msg, rinfo) => {
-    log.push(`server got: ${msg} from ${rinfo.address}:${rinfo.port}`);
-    msg="echo from server, your IP address is: "+rinfo.address+":"+rinfo.port;
-    socket.send(msg,rinfo.port,rinfo.address,()=>{
-      log.push("echo sent: ",msg);
-    })
-  });
-  
-  socket.on('listening', () => {
-    const address = socket.address();
-    log.push(`server listening ${address.address}:${address.port}`);
-    console.log(`server listening ${address.address}:${address.port}`);
-  });
+// --------------------creating a udp server --------------------
+
+// creating a udp server
+var server = udp.createSocket('udp4');
+
+// emits when any error occurs
+server.on('error',function(error){
+  console.log('Error: ' + error);
+  server.close();
+});
+
+// emits on new datagram msg
+server.on('message',function(msg,info){
+  console.log('Data received from client : ' + msg.toString());
+  console.log('Received %d bytes from %s:%d\n',msg.length, info.address, info.port);
+
+//sending msg
+server.send(msg,info.port,info.address,function(error){
+  if(error){
+    console.error(error);
+  }else{
+    console.log('Data sent !!!');
+  }
+
+});
+
+});
+
+//emits when socket is ready and listening for datagram msgs
+server.on('listening',function(){
+  var address = server.address();
+  var port = address.port;
+  var family = address.family;
+  var ipaddr = address.address;
+  console.log('Server is listening at port' + port);
+  console.log('Server ip :' + ipaddr);
+  console.log('Server is IP4/IP6 : ' + family);
+});
+
+//emits after the socket is closed using socket.close();
+server.on('close',function(){
+  console.log('Socket is closed !');
+});
+
+server.bind(process.env.PORT || 2222);
   
 http.createServer(function (req, res) {
   res.write(JSON.stringify(log)); 
   res.end(); 
 }).listen(process.env.PORT || 2222);
-
-socket.bind(process.env.PORT || 2222);
